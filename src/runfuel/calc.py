@@ -6,6 +6,7 @@ without a database, a request, or a template.
 """
 
 import math
+from datetime import date, timedelta
 
 
 def parse_duration(text: str) -> int:
@@ -121,3 +122,32 @@ def calories_burned(distance_km: float, duration_s: int, weight_kg: float) -> fl
     met = met_for_speed(speed_kmh(distance_km, duration_s))
     duration_minutes = duration_s / 60
     return met * 3.5 * weight_kg / 200 * duration_minutes
+
+
+FELT_MIN = 1
+FELT_MAX = 5
+
+
+def parse_felt(text: str) -> int | None:
+    """Parse a "how it felt" rating, where blank means the runner skipped it."""
+    stripped = text.strip()
+    if not stripped:
+        return None
+
+    try:
+        rating = int(stripped)
+    except ValueError:
+        raise ValueError(
+            f"felt must be a whole number from {FELT_MIN} to {FELT_MAX}, got {text!r}"
+        ) from None
+
+    if not FELT_MIN <= rating <= FELT_MAX:
+        raise ValueError(
+            f"felt must be from {FELT_MIN} to {FELT_MAX}, got {rating}"
+        )
+    return rating
+
+
+def week_start(run_date: date) -> date:
+    """The Monday of the ISO week containing ``run_date``."""
+    return run_date - timedelta(days=run_date.weekday())

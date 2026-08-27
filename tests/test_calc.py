@@ -1,3 +1,5 @@
+from datetime import date
+
 import pytest
 
 from runfuel import calc
@@ -187,3 +189,35 @@ class TestCalories:
     def test_non_positive_duration_raises(self):
         with pytest.raises(ValueError):
             calc.calories_burned(10.0, 0, 70.0)
+
+
+class TestParseFelt:
+    def test_blank_means_no_rating(self):
+        assert calc.parse_felt("") is None
+
+    def test_whitespace_only_means_no_rating(self):
+        assert calc.parse_felt("   ") is None
+
+    @pytest.mark.parametrize("text, expected", [("1", 1), ("3", 3), ("5", 5)])
+    def test_parses_the_allowed_range(self, text, expected):
+        assert calc.parse_felt(text) == expected
+
+    @pytest.mark.parametrize("text", ["0", "6", "9", "-1", "3.5", "great", "1 2"])
+    def test_rejects_anything_outside_one_to_five(self, text):
+        with pytest.raises(ValueError):
+            calc.parse_felt(text)
+
+
+class TestWeekStart:
+    def test_monday_is_its_own_week_start(self):
+        assert calc.week_start(date(2026, 8, 24)) == date(2026, 8, 24)
+
+    def test_sunday_belongs_to_the_week_that_began_on_monday(self):
+        assert calc.week_start(date(2026, 8, 30)) == date(2026, 8, 24)
+
+    def test_midweek_day_resolves_back_to_monday(self):
+        assert calc.week_start(date(2026, 8, 27)) == date(2026, 8, 24)
+
+    def test_week_can_span_a_year_boundary(self):
+        # 2026-01-01 is a Thursday; its ISO week began Monday 2025-12-29.
+        assert calc.week_start(date(2026, 1, 1)) == date(2025, 12, 29)
