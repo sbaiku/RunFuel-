@@ -34,6 +34,17 @@ uv run pytest tests/test_calc.py -v
 uv run pytest tests/test_calc.py::TestCalories::test_reference_ten_km_in_fifty_minutes -v
 ```
 
+## What it records
+
+Each run stores a date, a distance in kilometres, a duration, and an optional
+"how it felt" rating from 1 to 5. Pace and calories are derived on read, never
+stored. Runs are grouped into ISO weeks (Monday-Sunday) in a summary above the
+log, where average pace comes from the week's totals rather than a mean of the
+individual paces - so a short run does not weigh as heavily as a long one.
+
+If you have a database from before the felt rating existed, it is upgraded in
+place the next time the app starts; existing runs simply show no rating.
+
 ## Configuration
 
 | Variable | Default | Meaning |

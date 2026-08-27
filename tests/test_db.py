@@ -105,3 +105,85 @@ class TestInitIsIdempotent:
         db.init_db(connection)
         assert db.list_runs(connection) == []
         connection.close()
+
+
+OLD_SCHEMA = """
+CREATE TABLE runs (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_date         TEXT    NOT NULL,
+    distance_km      REAL    NOT NULL CHECK (distance_km > 0),
+    duration_seconds INTEGER NOT NULL CHECK (duration_seconds > 0),
+    created_at       TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+"""
+
+
+def _columns(connection) -> set[str]:
+    return {row["name"] for row in connection.execute("PRAGMA table_info(runs)")}
+
+
+class TestFelt:
+    def test_round_trips_a_rating(self, conn):
+        db.add_run(conn, date(2026, 8, 27), 10.0, 3000, felt=4)
+
+        assert db.list_runs(conn)[0].felt == 4
+
+    def test_a_run_without_a_rating_reads_back_as_none(self, conn):
+        db.add_run(conn, date(2026, 8, 27), 10.0, 3000)
+
+        assert db.list_runs(conn)[0].felt is None
+
+    @pytest.mark.parametrize("felt", [0, 6, -1])
+    def test_schema_rejects_ratings_outside_one_to_five(self, conn, felt):
+        with pytest.raises(sqlite3.IntegrityError):
+            db.add_run(conn, date(2026, 8, 27), 10.0, 3000, felt=felt)
+
+
+class TestUpgradingAnExistingDatabase:
+    """`CREATE TABLE IF NOT EXISTS` cannot add a column to a table that exists."""
+
+    def test_init_db_adds_felt_to_a_pre_existing_table(self, tmp_path):
+        path = tmp_path / "old.db"
+        connection = db.connect(path)
+        connection.executescript(OLD_SCHEMA)
+        connection.execute(
+            "INSERT INTO runs (run_date, distance_km, duration_seconds)"
+            " VALUES ('2026-08-27', 10.0, 3000)"
+        )
+        connection.commit()
+        assert "felt" not in _columns(connection)
+
+        db.init_db(connection)
+
+        assert "felt" in _columns(connection)
+        connection.close()
+
+    def test_rows_logged_before_the_upgrade_survive_it(self, tmp_path):
+        path = tmp_path / "old.db"
+        connection = db.connect(path)
+        connection.executescript(OLD_SCHEMA)
+        connection.execute(
+            "INSERT INTO runs (run_date, distance_km, duration_seconds)"
+            " VALUES ('2026-08-27', 10.0, 3000)"
+        )
+        connection.commit()
+
+        db.init_db(connection)
+
+        runs = db.list_runs(connection)
+        assert len(runs) == 1
+        assert runs[0].distance_km == 10.0
+        assert runs[0].felt is None
+        connection.close()
+
+    def test_new_runs_are_loggable_after_the_upgrade(self, tmp_path):
+        path = tmp_path / "old.db"
+        connection = db.connect(path)
+        connection.executescript(OLD_SCHEMA)
+        connection.commit()
+
+        db.init_db(connection)
+        db.add_run(connection, date(2026, 8, 27), 10.0, 3000, felt=5)
+
+        assert db.list_runs(connection)[0].felt == 5
+        connection.close()

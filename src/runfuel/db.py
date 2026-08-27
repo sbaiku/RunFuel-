@@ -30,7 +30,25 @@ def init_db(connection: sqlite3.Connection) -> None:
     """Create the schema if it is not already there. Safe to call repeatedly."""
     schema = resources.files("runfuel").joinpath("schema.sql").read_text()
     connection.executescript(schema)
+    _add_missing_columns(connection)
     connection.commit()
+
+
+# Columns added after the first release. `CREATE TABLE IF NOT EXISTS` is a no-op
+# on a table that already exists, so a database created before a column was
+# introduced would never gain it — and every insert would fail on the missing
+# column. Adding them here keeps existing logs working without a migration tool.
+_ADDED_COLUMNS = {
+    "felt": "ALTER TABLE runs ADD COLUMN felt INTEGER"
+            " CHECK (felt IS NULL OR felt BETWEEN 1 AND 5)",
+}
+
+
+def _add_missing_columns(connection: sqlite3.Connection) -> None:
+    existing = {row["name"] for row in connection.execute("PRAGMA table_info(runs)")}
+    for column, statement in _ADDED_COLUMNS.items():
+        if column not in existing:
+            connection.execute(statement)
 
 
 def add_run(
@@ -38,12 +56,13 @@ def add_run(
     run_date: date,
     distance_km: float,
     duration_seconds: int,
+    felt: int | None = None,
 ) -> int:
     """Insert one run and return its new id."""
     cursor = connection.execute(
-        "INSERT INTO runs (run_date, distance_km, duration_seconds)"
-        " VALUES (?, ?, ?)",
-        (run_date.isoformat(), distance_km, duration_seconds),
+        "INSERT INTO runs (run_date, distance_km, duration_seconds, felt)"
+        " VALUES (?, ?, ?, ?)",
+        (run_date.isoformat(), distance_km, duration_seconds, felt),
     )
     connection.commit()
     return int(cursor.lastrowid)
@@ -52,7 +71,7 @@ def add_run(
 def list_runs(connection: sqlite3.Connection) -> list[Run]:
     """Every run, newest first."""
     rows = connection.execute(
-        "SELECT id, run_date, distance_km, duration_seconds"
+        "SELECT id, run_date, distance_km, duration_seconds, felt"
         " FROM runs ORDER BY run_date DESC, id DESC"
     ).fetchall()
     return [
@@ -61,6 +80,7 @@ def list_runs(connection: sqlite3.Connection) -> list[Run]:
             run_date=date.fromisoformat(row["run_date"]),
             distance_km=row["distance_km"],
             duration_seconds=row["duration_seconds"],
+            felt=row["felt"],
         )
         for row in rows
     ]

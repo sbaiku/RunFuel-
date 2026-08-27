@@ -23,10 +23,46 @@
     <input type="text" name="duration" placeholder="50:00"
            value="{{ form.get('duration', '') }}" required />
   </label>
+  <label>
+    Felt (1&ndash;5)
+    <select name="felt">
+      <option value=""{{ ' selected' if form.get('felt') not in ['1', '2', '3', '4', '5'] else '' }}>&mdash;</option>
+      {% for score in [1, 2, 3, 4, 5] %}
+      <option value="{{ score }}"{{ ' selected' if form.get('felt') == score|string else '' }}>{{ score }}</option>
+      {% endfor %}
+    </select>
+  </label>
   <button type="submit">Log run</button>
 </form>
 
+{% if weeks %}
+<h2>By week</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Week of</th>
+      <th class="numeric">Runs</th>
+      <th class="numeric">Distance</th>
+      <th class="numeric">Avg pace</th>
+      <th class="numeric">Calories</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for week in weeks %}
+    <tr>
+      <td>{{ week.week_start.isoformat() }}</td>
+      <td class="numeric">{{ week.count }}</td>
+      <td class="numeric">{{ "%.2f"|format(week.distance_km) }} km</td>
+      <td class="numeric">{{ week.pace }}</td>
+      <td class="numeric">{{ week.calories|round|int }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
 {% if runs %}
+<h2>All runs</h2>
 <table>
   <thead>
     <tr>
@@ -35,6 +71,7 @@
       <th class="numeric">Duration</th>
       <th class="numeric">Pace</th>
       <th class="numeric">Calories</th>
+      <th class="numeric">Felt</th>
       <th></th>
     </tr>
   </thead>
@@ -46,6 +83,7 @@
       <td class="numeric">{{ run.duration }}</td>
       <td class="numeric">{{ run.pace }}</td>
       <td class="numeric">{{ run.calories|round|int }}</td>
+      <td class="numeric felt">{{ run.felt if run.felt is not none else "&mdash;"|safe }}</td>
       <td>
         <form method="post" action="/runs/{{ run.id }}/delete">
           <button type="submit">Delete</button>
@@ -61,6 +99,7 @@
       <td class="numeric">{{ totals.duration }}</td>
       <td class="numeric">&mdash;</td>
       <td class="numeric">{{ totals.calories }}</td>
+      <td class="numeric">&mdash;</td>
       <td></td>
     </tr>
   </tfoot>
