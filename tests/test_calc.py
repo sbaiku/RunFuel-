@@ -144,9 +144,10 @@ class TestMetBands:
     def test_walking_pace_falls_into_the_lowest_band(self):
         assert calc.met_for_speed(4.0) == 6.0
 
-    def test_non_positive_speed_raises(self):
+    @pytest.mark.parametrize("speed", [0.0, -1.0])
+    def test_non_positive_speed_raises(self, speed):
         with pytest.raises(ValueError):
-            calc.met_for_speed(0.0)
+            calc.met_for_speed(speed)
 
 
 class TestCalories:

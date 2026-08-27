@@ -48,6 +48,14 @@ class TestAddAndList:
     def test_empty_database_lists_nothing(self, conn):
         assert db.list_runs(conn) == []
 
+    def test_same_date_runs_break_ties_newest_id_first(self, conn):
+        first_id = db.add_run(conn, date(2026, 8, 27), 5.0, 1500)
+        second_id = db.add_run(conn, date(2026, 8, 27), 10.0, 3000)
+
+        ids = [run.id for run in db.list_runs(conn)]
+
+        assert ids == [second_id, first_id]
+
 
 class TestDelete:
     def test_removes_the_row(self, conn):

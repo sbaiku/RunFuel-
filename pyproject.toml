@@ -25,3 +25,4 @@ packages = ["src/runfuel"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+filterwarnings = ["error"]

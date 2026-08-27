@@ -57,7 +57,7 @@
   <tfoot>
     <tr>
       <td>{{ totals.count }} run{{ '' if totals.count == 1 else 's' }}</td>
-      <td class="numeric">{{ totals.distance_km }} km</td>
+      <td class="numeric">{{ "%.2f"|format(totals.distance_km) }} km</td>
       <td class="numeric">{{ totals.duration }}</td>
       <td class="numeric">&mdash;</td>
       <td class="numeric">{{ totals.calories }}</td>

@@ -50,4 +50,5 @@ class TestRunView:
 
         view = RunView.from_run(run, weight_kg=settings.weight_kg)
 
-        assert view.pace == "5:00 /km"
+        # 5 km / 25:00 -> 12.0 km/h -> MET 10.5; 10.5 * 3.5 * 70 / 200 * 25 = 321.5625
+        assert round(view.calories, 4) == 321.5625
