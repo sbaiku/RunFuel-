@@ -148,11 +148,11 @@ calories_burned(distance_km: float, duration_s: int, weight_kg: float) -> float
 | Route | Behavior |
 |---|---|
 | `GET /` | `list_runs()` -> wrap each row in a `RunView` carrying derived pace and calories -> render `index.html` with the table and totals |
+| `POST /runs` | `Form(...)` params -> `parse_duration` -> `add_run` -> 303 redirect to `/` |
+| `POST /runs/{id}/delete` | `delete_run` -> 303 redirect to `/` |
 
 Totals are aggregated in `app.py` from the `RunView` list, not in SQL — calories
 are derived rather than stored, so they cannot be summed by the database.
-| `POST /runs` | `Form(...)` params -> `parse_duration` -> `add_run` -> 303 redirect to `/` |
-| `POST /runs/{id}/delete` | `delete_run` -> 303 redirect to `/` |
 
 Both mutating routes use POST-redirect-GET so that a browser refresh cannot
 double-log or re-delete.
