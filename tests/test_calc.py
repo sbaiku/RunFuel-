@@ -97,6 +97,21 @@ class TestGuards:
         with pytest.raises(ValueError):
             calc.format_pace(0.0)
 
+    @pytest.mark.parametrize("distance", [float("inf"), float("-inf"), float("nan")])
+    def test_non_finite_distance_raises(self, distance):
+        with pytest.raises(ValueError):
+            calc.validate_run(distance, 600)
+        with pytest.raises(ValueError):
+            calc.pace_seconds_per_km(distance, 600)
+        with pytest.raises(ValueError):
+            calc.speed_kmh(distance, 600)
+
+    def test_non_finite_duration_raises(self):
+        with pytest.raises(ValueError):
+            calc.validate_run(5.0, float("inf"))
+        with pytest.raises(ValueError):
+            calc.validate_run(5.0, float("nan"))
+
 
 class TestMetBands:
     @pytest.mark.parametrize(
@@ -156,6 +171,11 @@ class TestCalories:
 
     @pytest.mark.parametrize("weight", [0.0, -70.0])
     def test_non_positive_weight_raises(self, weight):
+        with pytest.raises(ValueError):
+            calc.calories_burned(10.0, 50 * 60, weight)
+
+    @pytest.mark.parametrize("weight", [float("inf"), float("-inf"), float("nan")])
+    def test_non_finite_weight_raises(self, weight):
         with pytest.raises(ValueError):
             calc.calories_burned(10.0, 50 * 60, weight)
 

@@ -5,6 +5,8 @@ numbers and returns numbers so that the interesting logic stays testable
 without a database, a request, or a template.
 """
 
+import math
+
 
 def parse_duration(text: str) -> int:
     """Parse ``MM:SS`` or ``HH:MM:SS`` into a positive number of seconds."""
@@ -48,29 +50,29 @@ def format_duration(seconds: int) -> str:
     return f"{minutes}:{secs:02d}"
 
 
-def _validate_run(distance_km: float, duration_s: int) -> None:
-    if distance_km <= 0:
-        raise ValueError(f"distance must be greater than zero, got {distance_km}")
-    if duration_s <= 0:
+def validate_run(distance_km: float, duration_s: int) -> None:
+    if not math.isfinite(distance_km) or distance_km <= 0:
+        raise ValueError(f"distance must be a finite number greater than zero, got {distance_km}")
+    if not math.isfinite(duration_s) or duration_s <= 0:
         raise ValueError(f"duration must be greater than zero, got {duration_s}")
 
 
 def speed_kmh(distance_km: float, duration_s: int) -> float:
     """Average speed in kilometres per hour."""
-    _validate_run(distance_km, duration_s)
+    validate_run(distance_km, duration_s)
     return distance_km / (duration_s / 3600)
 
 
 def pace_seconds_per_km(distance_km: float, duration_s: int) -> float:
     """Average pace in seconds per kilometre."""
-    _validate_run(distance_km, duration_s)
+    validate_run(distance_km, duration_s)
     return duration_s / distance_km
 
 
 def format_pace(seconds_per_km: float) -> str:
     """Render a pace as ``M:SS /km``, rounding seconds and carrying the minute."""
     if seconds_per_km <= 0:
-        raise ValueError("pace must be greater than zero")
+        raise ValueError(f"pace must be greater than zero, got {seconds_per_km}")
 
     minutes, seconds = divmod(round(seconds_per_km), 60)
     return f"{minutes}:{seconds:02d} /km"
@@ -113,7 +115,7 @@ def calories_burned(distance_km: float, duration_s: int, weight_kg: float) -> fl
     Note that this is deliberately not monotonic in speed: burn scales as
     ``MET(speed) / speed`` and the banded table is not monotonic in that ratio.
     """
-    if weight_kg <= 0:
+    if not math.isfinite(weight_kg) or weight_kg <= 0:
         raise ValueError(f"weight must be greater than zero, got {weight_kg}")
 
     met = met_for_speed(speed_kmh(distance_km, duration_s))

@@ -89,8 +89,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     ):
         try:
             duration_seconds = calc.parse_duration(duration)
-            # Validate distance through the same pure guard the calculations use.
-            calc.pace_seconds_per_km(distance_km, duration_seconds)
+            calc.validate_run(distance_km, duration_seconds)
         except ValueError as exc:
             return _render(
                 request,
