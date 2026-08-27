@@ -104,6 +104,7 @@ __pycache__/
 *.db
 .pytest_cache/
 dist/
+.superpowers/
 ```
 
 `src/runfuel/__init__.py`:
