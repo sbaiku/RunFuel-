@@ -1019,6 +1019,17 @@ class TestLoggingARun:
         assert response.status_code == 400
         assert db.list_runs(conn) == []
 
+    def test_submitted_values_survive_the_error_rerender(self, client):
+        response = client.post(
+            "/runs",
+            data={"run_date": "2026-08-27", "distance_km": "0", "duration": "50:00"},
+        )
+
+        assert response.status_code == 400
+        # 0.0 is falsy: the form must still echo it back, not blank the field.
+        assert 'value="0.0"' in response.text
+        assert 'value="50:00"' in response.text
+
     def test_malformed_date_is_rejected_by_validation(self, client, conn):
         response = client.post(
             "/runs",
@@ -1244,17 +1255,17 @@ Create `src/runfuel/templates/index.html`:
 <form class="log" method="post" action="/runs">
   <label>
     Date
-    <input type="date" name="run_date" value="{{ form.run_date or today }}" required />
+    <input type="date" name="run_date" value="{{ form.get('run_date') or today }}" required />
   </label>
   <label>
     Distance (km)
     <input type="number" name="distance_km" step="0.01" min="0.01"
-           value="{{ form.distance_km or '' }}" required />
+           value="{{ form.get('distance_km', '') }}" required />
   </label>
   <label>
     Duration (MM:SS)
     <input type="text" name="duration" placeholder="50:00"
-           value="{{ form.duration or '' }}" required />
+           value="{{ form.get('duration', '') }}" required />
   </label>
   <button type="submit">Log run</button>
 </form>
@@ -1307,7 +1318,7 @@ Create `src/runfuel/templates/index.html`:
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest tests/test_routes.py -v`
-Expected: PASS (8 tests)
+Expected: PASS (9 tests)
 
 If `test_totals_sum_across_runs` fails on the `"15.0"` assertion, check that `_totals` rounds to 2 decimals — `round(15.0, 2)` renders as `15.0`, which is what the assertion expects.
 
