@@ -1345,25 +1345,53 @@ git commit -m "feat: add FastAPI routes and Jinja2 templates"
 - Consumes: `create_app`/`app` from Task 7.
 - Produces: nothing code-facing; documents how to run the app.
 
-- [ ] **Step 1: Start the server**
+- [ ] **Step 1: Start the server against a scratch database**
 
-Run: `uv run uvicorn runfuel.app:app --reload --port 8000`
-Expected: uvicorn starts, `runfuel.db` is created in the working directory.
+```bash
+RUNFUEL_DB_PATH=/tmp/runfuel-smoke.db uv run uvicorn runfuel.app:app --port 8765 &
+```
 
-- [ ] **Step 2: Log a run by hand**
+Wait for it to accept connections, then confirm the empty state:
 
-Open `http://127.0.0.1:8000`, enter today's date, `10` km, `50:00`. Submit.
-Expected: the table shows `5:00 /km` and roughly `643` calories, and the totals row reads `1 run`, `10.0 km`, `50:00`.
+```bash
+curl -s http://127.0.0.1:8765/ | grep -c "No runs logged yet"
+```
 
-- [ ] **Step 3: Confirm refresh does not double-log**
+Expected: `1`.
 
-Press refresh after submitting.
-Expected: still one run — the 303 redirect means the browser re-issues `GET /`, not the POST.
+- [ ] **Step 2: Log a run over HTTP**
 
-- [ ] **Step 4: Delete the run**
+```bash
+curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' -X POST http://127.0.0.1:8765/runs -d "run_date=2026-08-27" -d "distance_km=10" -d "duration=50:00"
+```
 
-Click Delete.
-Expected: the empty state returns. Stop the server with Ctrl-C.
+Expected: `303 http://127.0.0.1:8765/` — the POST-redirect-GET response, not a 200.
+
+- [ ] **Step 3: Confirm the derived values render**
+
+```bash
+curl -s http://127.0.0.1:8765/ | grep -oE '5:00 /km|643|10\.00 km|1 run'
+```
+
+Expected: all four present — the pace, the calorie estimate, the distance, and the totals count.
+
+- [ ] **Step 4: Confirm re-fetching does not double-log, then delete**
+
+Fetch `/` twice more and count the delete buttons — each row has exactly one:
+
+```bash
+curl -s http://127.0.0.1:8765/ > /dev/null; curl -s http://127.0.0.1:8765/ | grep -c "Delete"
+```
+
+Expected: `1` — re-fetching after the redirect re-issues GET, never the POST.
+
+Then delete the run and confirm the empty state returns:
+
+```bash
+curl -s -X POST http://127.0.0.1:8765/runs/1/delete -o /dev/null -w '%{http_code}\n'; curl -s http://127.0.0.1:8765/ | grep -c "No runs logged yet"
+```
+
+Expected: `303` then `1`. Stop the server (`kill %1`) and remove `/tmp/runfuel-smoke.db`.
 
 - [ ] **Step 5: Write the README**
 
