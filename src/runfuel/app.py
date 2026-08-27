@@ -13,7 +13,7 @@ from fastapi.templating import Jinja2Templates
 
 from runfuel import calc, db
 from runfuel.config import Settings, load_settings
-from runfuel.models import RunView
+from runfuel.models import RunView, summarise_weeks
 
 TEMPLATES = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
@@ -66,6 +66,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             name="index.html",
             context={
                 "runs": views,
+                "weeks": summarise_weeks(views),
                 "totals": _totals(views),
                 "error": error,
                 "form": form or {},
@@ -85,11 +86,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         run_date: date = Form(...),
         distance_km: float = Form(...),
         duration: str = Form(...),
+        felt: str = Form(""),
         connection=Depends(get_connection),
     ):
         try:
             duration_seconds = calc.parse_duration(duration)
             calc.validate_run(distance_km, duration_seconds)
+            rating = calc.parse_felt(felt)
         except ValueError as exc:
             return _render(
                 request,
@@ -99,11 +102,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     "run_date": run_date.isoformat(),
                     "distance_km": distance_km,
                     "duration": duration,
+                    "felt": felt,
                 },
                 status_code=400,
             )
 
-        db.add_run(connection, run_date, distance_km, duration_seconds)
+        db.add_run(connection, run_date, distance_km, duration_seconds, rating)
         return RedirectResponse(url="/", status_code=303)
 
     @app.post("/runs/{run_id}/delete")
