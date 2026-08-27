@@ -127,18 +127,23 @@ class TestWeight:
 
 class TestOrdering:
     def test_newer_run_appears_first_through_http(self, client):
+        # Both dates are safely in the past so neither can collide with the
+        # date input's `today` default value, which renders above the table.
         client.post(
             "/runs",
-            data={"run_date": "2026-08-01", "distance_km": "5", "duration": "25:00"},
+            data={"run_date": "2020-01-01", "distance_km": "5", "duration": "25:00"},
         )
         client.post(
             "/runs",
-            data={"run_date": "2026-08-27", "distance_km": "10", "duration": "50:00"},
+            data={"run_date": "2020-06-01", "distance_km": "10", "duration": "50:00"},
         )
 
         body = client.get("/").text
+        # Scope the search to the table body so a form field's value can
+        # never satisfy the assertion in place of an actual table row.
+        rows = body[body.index("<tbody>"):]
 
-        assert body.index("2026-08-27") < body.index("2026-08-01")
+        assert rows.index("2020-06-01") < rows.index("2020-01-01")
 
 
 class TestDeletingARun:
