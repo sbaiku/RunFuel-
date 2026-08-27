@@ -148,6 +148,9 @@ calories_burned(distance_km: float, duration_s: int, weight_kg: float) -> float
 | Route | Behavior |
 |---|---|
 | `GET /` | `list_runs()` -> wrap each row in a `RunView` carrying derived pace and calories -> render `index.html` with the table and totals |
+
+Totals are aggregated in `app.py` from the `RunView` list, not in SQL — calories
+are derived rather than stored, so they cannot be summed by the database.
 | `POST /runs` | `Form(...)` params -> `parse_duration` -> `add_run` -> 303 redirect to `/` |
 | `POST /runs/{id}/delete` | `delete_run` -> 303 redirect to `/` |
 
@@ -155,6 +158,11 @@ Both mutating routes use POST-redirect-GET so that a browser refresh cannot
 double-log or re-delete.
 
 ## Error handling
+
+`run_date` is declared as `datetime.date` on the form parameter, so FastAPI
+coerces and validates it and returns its own 422 for a malformed date; it is
+stored as an ISO-8601 string. Duration is received as `str` because its format is
+domain-specific, and is validated by `calc.parse_duration`.
 
 `calc.py` raises `ValueError` for non-positive distance, non-positive duration,
 and unparseable duration text. `app.py` catches `ValueError` at the route
@@ -169,9 +177,9 @@ invalid row is written. The `CHECK` constraints in the schema are the backstop.
 - **Pace:** 10 km in 50:00 -> 300 s/km -> `"5:00 /km"`; rounding carry at 359.6 s
 - **Duration parsing:** `MM:SS`, `HH:MM:SS`, and malformed input raising `ValueError`
 - **MET bands:** each boundary speed exactly, and values just either side of it
-- **Calories:** the 643.125 kcal reference above plus a second hand-computed
-  point; exact linearity in weight (doubling weight doubles kcal); linearity in
-  duration within a single band
+- **Calories:** two hand-computed reference points — 10 km in 50:00 at 70 kg ->
+  643.125 kcal, and 10 km in 40:00 at 70 kg -> 578.2 kcal; exact linearity in
+  weight (doubling weight doubles kcal); linearity in duration within a single band
 - **Guards:** zero and negative distance and duration raise `ValueError`
 
 `tests/test_routes.py` — a thinner integration pass over a tmp-path database:
