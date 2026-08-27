@@ -11,17 +11,17 @@
 <form class="log" method="post" action="/runs">
   <label>
     Date
-    <input type="date" name="run_date" value="{{ form.run_date or today }}" required />
+    <input type="date" name="run_date" value="{{ form.get('run_date') or today }}" required />
   </label>
   <label>
     Distance (km)
     <input type="number" name="distance_km" step="0.01" min="0.01"
-           value="{{ form.distance_km or '' }}" required />
+           value="{{ form.get('distance_km', '') }}" required />
   </label>
   <label>
     Duration (MM:SS)
     <input type="text" name="duration" placeholder="50:00"
-           value="{{ form.duration or '' }}" required />
+           value="{{ form.get('duration', '') }}" required />
   </label>
   <button type="submit">Log run</button>
 </form>

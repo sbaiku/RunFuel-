@@ -55,6 +55,17 @@ class TestLoggingARun:
         assert response.status_code == 400
         assert db.list_runs(conn) == []
 
+    def test_submitted_values_survive_the_error_rerender(self, client):
+        response = client.post(
+            "/runs",
+            data={"run_date": "2026-08-27", "distance_km": "0", "duration": "50:00"},
+        )
+
+        assert response.status_code == 400
+        # 0.0 is falsy: the form must still echo it back, not blank the field.
+        assert 'value="0.0"' in response.text
+        assert 'value="50:00"' in response.text
+
     def test_malformed_date_is_rejected_by_validation(self, client, conn):
         response = client.post(
             "/runs",
