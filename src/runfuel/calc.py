@@ -46,3 +46,31 @@ def format_duration(seconds: int) -> str:
     if hours:
         return f"{hours}:{minutes:02d}:{secs:02d}"
     return f"{minutes}:{secs:02d}"
+
+
+def _validate_run(distance_km: float, duration_s: int) -> None:
+    if distance_km <= 0:
+        raise ValueError(f"distance must be greater than zero, got {distance_km}")
+    if duration_s <= 0:
+        raise ValueError(f"duration must be greater than zero, got {duration_s}")
+
+
+def speed_kmh(distance_km: float, duration_s: int) -> float:
+    """Average speed in kilometres per hour."""
+    _validate_run(distance_km, duration_s)
+    return distance_km / (duration_s / 3600)
+
+
+def pace_seconds_per_km(distance_km: float, duration_s: int) -> float:
+    """Average pace in seconds per kilometre."""
+    _validate_run(distance_km, duration_s)
+    return duration_s / distance_km
+
+
+def format_pace(seconds_per_km: float) -> str:
+    """Render a pace as ``M:SS /km``, rounding seconds and carrying the minute."""
+    if seconds_per_km <= 0:
+        raise ValueError("pace must be greater than zero")
+
+    minutes, seconds = divmod(round(seconds_per_km), 60)
+    return f"{minutes}:{seconds:02d} /km"
