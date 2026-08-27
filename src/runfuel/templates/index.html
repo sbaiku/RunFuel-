@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>RunFuel</h1>
+<p class="subtitle">Calories estimated at {{ weight_kg }} kg.</p>
+
+{% if error %}
+<p class="error"><strong>Error:</strong> {{ error }}</p>
+{% endif %}
+
+<form class="log" method="post" action="/runs">
+  <label>
+    Date
+    <input type="date" name="run_date" value="{{ form.run_date or today }}" required />
+  </label>
+  <label>
+    Distance (km)
+    <input type="number" name="distance_km" step="0.01" min="0.01"
+           value="{{ form.distance_km or '' }}" required />
+  </label>
+  <label>
+    Duration (MM:SS)
+    <input type="text" name="duration" placeholder="50:00"
+           value="{{ form.duration or '' }}" required />
+  </label>
+  <button type="submit">Log run</button>
+</form>
+
+{% if runs %}
+<table>
+  <thead>
+    <tr>
+      <th>Date</th>
+      <th class="numeric">Distance</th>
+      <th class="numeric">Duration</th>
+      <th class="numeric">Pace</th>
+      <th class="numeric">Calories</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for run in runs %}
+    <tr>
+      <td>{{ run.run_date.isoformat() }}</td>
+      <td class="numeric">{{ "%.2f"|format(run.distance_km) }} km</td>
+      <td class="numeric">{{ run.duration }}</td>
+      <td class="numeric">{{ run.pace }}</td>
+      <td class="numeric">{{ run.calories|round|int }}</td>
+      <td>
+        <form method="post" action="/runs/{{ run.id }}/delete">
+          <button type="submit">Delete</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr>
+      <td>{{ totals.count }} run{{ '' if totals.count == 1 else 's' }}</td>
+      <td class="numeric">{{ totals.distance_km }} km</td>
+      <td class="numeric">{{ totals.duration }}</td>
+      <td class="numeric">&mdash;</td>
+      <td class="numeric">{{ totals.calories }}</td>
+      <td></td>
+    </tr>
+  </tfoot>
+</table>
+{% else %}
+<p class="empty">No runs logged yet. Add your first one above.</p>
+{% endif %}
+{% endblock %}
