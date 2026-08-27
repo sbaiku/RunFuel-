@@ -139,6 +139,7 @@ the test suite must not assert monotonicity in speed.
 ## Public interface of `calc.py`
 
 ```python
+validate_run(distance_km: float, duration_s: int) -> None   # raises ValueError
 parse_duration(text: str) -> int             # "45:30" | "1:05:30" -> seconds
 format_duration(seconds: int) -> str
 speed_kmh(distance_km: float, duration_s: int) -> float
@@ -170,7 +171,13 @@ stored as an ISO-8601 string. Duration is received as `str` because its format i
 domain-specific, and is validated by `calc.parse_duration`.
 
 `calc.py` raises `ValueError` for non-positive distance, non-positive duration,
-and unparseable duration text. `app.py` catches `ValueError` at the route
+and unparseable duration text. It also rejects non-finite distance and weight:
+`inf` and `nan` survive HTML form coercion, and an `inf` distance would otherwise
+pass the write-path guard, persist, and then raise on every subsequent read —
+permanently breaking the index page with no in-app way to delete the row. The
+write path and the read path must therefore enforce the same rule, which is why
+`validate_run` is public and the route calls it directly rather than validating
+by side effect. `app.py` catches `ValueError` at the route
 boundary and re-renders `index.html` with an error banner and the submitted
 values preserved, returning HTTP 400. No stack trace reaches the user, and no
 invalid row is written. The `CHECK` constraints in the schema are the backstop.
