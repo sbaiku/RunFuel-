@@ -13,8 +13,15 @@ from runfuel.models import Run
 
 
 def connect(db_path: Path) -> sqlite3.Connection:
-    """Open a connection with row access by column name."""
-    connection = sqlite3.connect(db_path)
+    """Open a connection with row access by column name.
+
+    ``check_same_thread=False`` is required, not incidental: FastAPI runs a
+    sync dependency and a sync endpoint on different threadpool threads, so a
+    connection opened in ``get_connection`` is used — and closed — from another
+    thread. Each request still gets its own connection and closes it, so no
+    connection is ever shared between concurrent requests.
+    """
+    connection = sqlite3.connect(db_path, check_same_thread=False)
     connection.row_factory = sqlite3.Row
     return connection
 

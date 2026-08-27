@@ -1,4 +1,5 @@
 import sqlite3
+import threading
 from datetime import date
 
 import pytest
@@ -67,6 +68,26 @@ class TestConstraints:
     def test_rejects_non_positive_duration(self, conn):
         with pytest.raises(sqlite3.IntegrityError):
             db.add_run(conn, date(2026, 8, 27), 10.0, 0)
+
+
+class TestThreadHandoff:
+    def test_connection_survives_use_from_another_thread(self, conn):
+        """FastAPI hands the connection between threadpool threads."""
+        db.add_run(conn, date(2026, 8, 27), 10.0, 3000)
+        result = {}
+
+        def read_from_another_thread():
+            try:
+                result["runs"] = db.list_runs(conn)
+            except Exception as exc:  # noqa: BLE001 - recorded for the assert
+                result["error"] = exc
+
+        worker = threading.Thread(target=read_from_another_thread)
+        worker.start()
+        worker.join()
+
+        assert "error" not in result, result.get("error")
+        assert len(result["runs"]) == 1
 
 
 class TestInitIsIdempotent:
