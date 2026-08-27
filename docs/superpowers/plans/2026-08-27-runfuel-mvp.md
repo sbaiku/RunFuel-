@@ -732,6 +732,7 @@ Create `tests/test_db.py`:
 
 ```python
 import sqlite3
+import threading
 from datetime import date
 
 import pytest
@@ -802,6 +803,26 @@ class TestConstraints:
             db.add_run(conn, date(2026, 8, 27), 10.0, 0)
 
 
+class TestThreadHandoff:
+    def test_connection_survives_use_from_another_thread(self, conn):
+        """FastAPI hands the connection between threadpool threads."""
+        db.add_run(conn, date(2026, 8, 27), 10.0, 3000)
+        result = {}
+
+        def read_from_another_thread():
+            try:
+                result["runs"] = db.list_runs(conn)
+            except Exception as exc:  # noqa: BLE001 - recorded for the assert
+                result["error"] = exc
+
+        worker = threading.Thread(target=read_from_another_thread)
+        worker.start()
+        worker.join()
+
+        assert "error" not in result, result.get("error")
+        assert len(result["runs"]) == 1
+
+
 class TestInitIsIdempotent:
     def test_can_be_called_twice(self, tmp_path):
         connection = db.connect(tmp_path / "twice.db")
@@ -848,8 +869,15 @@ from runfuel.models import Run
 
 
 def connect(db_path: Path) -> sqlite3.Connection:
-    """Open a connection with row access by column name."""
-    connection = sqlite3.connect(db_path)
+    """Open a connection with row access by column name.
+
+    ``check_same_thread=False`` is required, not incidental: FastAPI runs a
+    sync dependency and a sync endpoint on different threadpool threads, so a
+    connection opened in ``get_connection`` is used — and closed — from another
+    thread. Each request still gets its own connection and closes it, so no
+    connection is ever shared between concurrent requests.
+    """
+    connection = sqlite3.connect(db_path, check_same_thread=False)
     connection.row_factory = sqlite3.Row
     return connection
 
@@ -904,7 +932,7 @@ def delete_run(connection: sqlite3.Connection, run_id: int) -> bool:
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest tests/test_db.py -v`
-Expected: PASS (9 tests)
+Expected: PASS (10 tests)
 
 - [ ] **Step 5: Commit**
 

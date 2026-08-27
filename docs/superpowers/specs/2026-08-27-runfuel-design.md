@@ -76,6 +76,11 @@ CREATE TABLE IF NOT EXISTS runs (
 );
 ```
 
+Connections are opened with `check_same_thread=False`. FastAPI runs a sync
+dependency and a sync endpoint on different threadpool threads, so the
+per-request connection is created, used, and closed across a thread boundary.
+Each request still owns its own connection, so none is shared concurrently.
+
 Pace and calories are **derived, never stored** — they are a pure function of the
 stored columns plus configured body weight, so storing them would invite drift if
 weight or the formula changes.
