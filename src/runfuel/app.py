@@ -3,6 +3,7 @@
 Holds no calculation logic of its own — it calls ``calc`` and ``db``.
 """
 
+from contextlib import asynccontextmanager
 from datetime import date
 from pathlib import Path
 
@@ -34,13 +35,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     a temporary database.
     """
     settings = settings or load_settings()
-    app = FastAPI(title="RunFuel")
 
-    # Create the schema up front: init_db is idempotent, and doing it here
-    # rather than in a startup hook keeps the app usable the moment it is built.
-    _bootstrap = db.connect(settings.db_path)
-    db.init_db(_bootstrap)
-    _bootstrap.close()
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI):
+        # Create the schema on startup rather than at import time: the
+        # module-level create_app() below must not touch the filesystem just
+        # because something imported runfuel.app. init_db is idempotent.
+        connection = db.connect(settings.db_path)
+        db.init_db(connection)
+        connection.close()
+        yield
+
+    app = FastAPI(title="RunFuel", lifespan=lifespan)
 
     def get_connection():
         connection = db.connect(settings.db_path)
