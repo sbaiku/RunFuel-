@@ -74,3 +74,48 @@ def format_pace(seconds_per_km: float) -> str:
 
     minutes, seconds = divmod(round(seconds_per_km), 60)
     return f"{minutes}:{seconds:02d} /km"
+
+
+# ACSM Compendium running entries, as (inclusive lower bound in km/h, MET).
+# Ordered fastest-first so the first match wins.
+_MET_BANDS: tuple[tuple[float, float], ...] = (
+    (19.3, 16.0),
+    (17.7, 14.5),
+    (16.1, 12.3),
+    (14.5, 11.8),
+    (12.9, 11.0),
+    (11.3, 10.5),
+    (9.7, 9.8),
+    (8.0, 9.0),
+    (6.4, 8.3),
+)
+_MET_BELOW_LOWEST_BAND = 6.0
+
+
+def met_for_speed(speed_kmh: float) -> float:
+    """Metabolic equivalent for a running speed, via a banded lookup.
+
+    Lower bounds are inclusive and upper bounds exclusive, so 6.4 km/h is the
+    first speed to score 8.3 rather than 6.0.
+    """
+    if speed_kmh <= 0:
+        raise ValueError(f"speed must be greater than zero, got {speed_kmh}")
+
+    for lower_bound, met in _MET_BANDS:
+        if speed_kmh >= lower_bound:
+            return met
+    return _MET_BELOW_LOWEST_BAND
+
+
+def calories_burned(distance_km: float, duration_s: int, weight_kg: float) -> float:
+    """Estimated kilocalories burned.
+
+    Note that this is deliberately not monotonic in speed: burn scales as
+    ``MET(speed) / speed`` and the banded table is not monotonic in that ratio.
+    """
+    if weight_kg <= 0:
+        raise ValueError(f"weight must be greater than zero, got {weight_kg}")
+
+    met = met_for_speed(speed_kmh(distance_km, duration_s))
+    duration_minutes = duration_s / 60
+    return met * 3.5 * weight_kg / 200 * duration_minutes

@@ -96,3 +96,73 @@ class TestGuards:
     def test_non_positive_pace_cannot_be_formatted(self):
         with pytest.raises(ValueError):
             calc.format_pace(0.0)
+
+
+class TestMetBands:
+    @pytest.mark.parametrize(
+        "speed, expected_met",
+        [
+            (6.39, 6.0),
+            (6.4, 8.3),
+            (7.99, 8.3),
+            (8.0, 9.0),
+            (9.69, 9.0),
+            (9.7, 9.8),
+            (11.29, 9.8),
+            (11.3, 10.5),
+            (12.89, 10.5),
+            (12.9, 11.0),
+            (14.49, 11.0),
+            (14.5, 11.8),
+            (16.09, 11.8),
+            (16.1, 12.3),
+            (17.69, 12.3),
+            (17.7, 14.5),
+            (19.29, 14.5),
+            (19.3, 16.0),
+            (25.0, 16.0),
+        ],
+    )
+    def test_band_boundaries_are_lower_inclusive(self, speed, expected_met):
+        assert calc.met_for_speed(speed) == expected_met
+
+    def test_walking_pace_falls_into_the_lowest_band(self):
+        assert calc.met_for_speed(4.0) == 6.0
+
+    def test_non_positive_speed_raises(self):
+        with pytest.raises(ValueError):
+            calc.met_for_speed(0.0)
+
+
+class TestCalories:
+    def test_reference_ten_km_in_fifty_minutes(self):
+        # 12.0 km/h -> MET 10.5; 10.5 * 3.5 * 70 / 200 * 50 = 643.125
+        assert calc.calories_burned(10.0, 50 * 60, 70.0) == pytest.approx(643.125)
+
+    def test_reference_ten_km_in_forty_minutes(self):
+        # 15.0 km/h -> MET 11.8; 11.8 * 3.5 * 70 / 200 * 40 = 578.2
+        assert calc.calories_burned(10.0, 40 * 60, 70.0) == pytest.approx(578.2)
+
+    def test_doubling_weight_doubles_calories(self):
+        light = calc.calories_burned(10.0, 50 * 60, 60.0)
+        heavy = calc.calories_burned(10.0, 50 * 60, 120.0)
+        assert heavy == pytest.approx(2 * light)
+
+    def test_scales_linearly_with_duration_inside_one_band(self):
+        # Both runs sit at 12.0 km/h, so MET is identical and only time differs.
+        short = calc.calories_burned(10.0, 50 * 60, 70.0)
+        long = calc.calories_burned(20.0, 100 * 60, 70.0)
+        assert long == pytest.approx(2 * short)
+
+    @pytest.mark.parametrize("weight", [0.0, -70.0])
+    def test_non_positive_weight_raises(self, weight):
+        with pytest.raises(ValueError):
+            calc.calories_burned(10.0, 50 * 60, weight)
+
+    def test_non_positive_distance_raises(self):
+        with pytest.raises(ValueError):
+            calc.calories_burned(0.0, 50 * 60, 70.0)
+
+    def test_non_positive_duration_raises(self):
+        with pytest.raises(ValueError):
+            calc.calories_burned(10.0, 0, 70.0)
