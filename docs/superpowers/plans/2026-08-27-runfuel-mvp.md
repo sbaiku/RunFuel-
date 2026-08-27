@@ -81,7 +81,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pytest>=8.0",
-    "httpx>=0.27",
+    "httpx2>=2.12",
 ]
 
 [build-system]
@@ -1075,6 +1075,7 @@ Create `src/runfuel/app.py`:
 Holds no calculation logic of its own — it calls ``calc`` and ``db``.
 """
 
+from contextlib import asynccontextmanager
 from datetime import date
 from pathlib import Path
 
@@ -1106,13 +1107,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     a temporary database.
     """
     settings = settings or load_settings()
-    app = FastAPI(title="RunFuel")
 
-    # Create the schema up front: init_db is idempotent, and doing it here
-    # rather than in a startup hook keeps the app usable the moment it is built.
-    _bootstrap = db.connect(settings.db_path)
-    db.init_db(_bootstrap)
-    _bootstrap.close()
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI):
+        # Create the schema on startup rather than at import time: the
+        # module-level create_app() below must not touch the filesystem just
+        # because something imported runfuel.app. init_db is idempotent.
+        connection = db.connect(settings.db_path)
+        db.init_db(connection)
+        connection.close()
+        yield
+
+    app = FastAPI(title="RunFuel", lifespan=lifespan)
 
     def get_connection():
         connection = db.connect(settings.db_path)
@@ -1301,7 +1307,7 @@ Create `src/runfuel/templates/index.html`:
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest tests/test_routes.py -v`
-Expected: PASS (9 tests)
+Expected: PASS (8 tests)
 
 If `test_totals_sum_across_runs` fails on the `"15.0"` assertion, check that `_totals` rounds to 2 decimals — `round(15.0, 2)` renders as `15.0`, which is what the assertion expects.
 

@@ -197,4 +197,4 @@ so tests never touch a developer's real `runfuel.db`.
 `src/` layout, so the package is imported as installed rather than by accident of
 the working directory. Runtime dependencies: `fastapi`, `uvicorn[standard]`,
 `jinja2`, `python-multipart` (required for form parsing). Dev dependency group:
-`pytest`, `httpx` (needed by `TestClient`).
+`pytest`, `httpx2` (needed by `TestClient`; Starlette deprecates `httpx` for this).
