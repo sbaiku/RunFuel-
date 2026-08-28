@@ -11,7 +11,7 @@ from fastapi import Depends, FastAPI, Form, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from runfuel import calc, db
+from runfuel import calc, db, recipes
 from runfuel.config import Settings, load_settings
 from runfuel.models import RunView, summarise_weeks
 
@@ -66,6 +66,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             name="index.html",
             context={
                 "runs": views,
+                "refuel": recipes.suggest(views[0].calories) if views else None,
                 "weeks": summarise_weeks(views),
                 "totals": _totals(views),
                 "error": error,
