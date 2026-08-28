@@ -35,6 +35,18 @@
   <button type="submit">Log run</button>
 </form>
 
+{% if refuel %}
+<section class="refuel">
+  <h2>Refuel</h2>
+  <p>
+    You burned <strong>{{ runs[0].calories|round|int }}</strong> kcal.
+    Try <strong>{{ refuel.recipe.name }}</strong> &mdash;
+    {{ refuel.servings }} serving{{ '' if refuel.servings == 1 else 's' }},
+    {{ refuel.total_kcal }} kcal, {{ refuel.total_protein_g|round(1) }}g protein.
+  </p>
+</section>
+{% endif %}
+
 {% if weeks %}
 <h2>By week</h2>
 <table>

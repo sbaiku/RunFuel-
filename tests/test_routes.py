@@ -263,3 +263,42 @@ class TestWeeklySummary:
         week = _weekly_section(client.get("/").text)
 
         assert week.index("2026-08-24") < week.index("2026-08-17")
+
+
+def _refuel(body: str) -> str:
+    """Just the refuel callout, so a match elsewhere cannot satisfy an assertion."""
+    start = body.index('class="refuel"')
+    return body[start : body.index("</section>", start)]
+
+
+class TestRefuelSuggestion:
+    def test_nothing_to_refuel_before_a_run_is_logged(self, client):
+        assert 'class="refuel"' not in client.get("/").text
+
+    def test_suggests_a_meal_sized_to_the_latest_burn(self, client):
+        _log(client, run_date="2026-08-27", distance_km="10", duration="50:00")
+
+        callout = _refuel(client.get("/").text)
+
+        assert "643" in callout
+        assert "Salmon and gnocchi hash" in callout
+        assert "641" in callout
+
+    def test_shows_the_serving_count_and_protein(self, client):
+        # 5 km in 30:00 burns 360 kcal; one serving of the 417 kcal chicken is nearest.
+        _log(client, run_date="2026-08-27", distance_km="5", duration="30:00")
+
+        callout = _refuel(client.get("/").text)
+
+        assert "Griddled chicken with pesto" in callout
+        assert "1 serving" in callout
+        assert "40.5" in callout
+
+    def test_tracks_the_newest_run_not_the_first_logged(self, client):
+        _log(client, run_date="2026-08-27", distance_km="10", duration="50:00")
+        _log(client, run_date="2026-08-20", distance_km="5", duration="30:00")
+
+        callout = _refuel(client.get("/").text)
+
+        assert "Salmon and gnocchi hash" in callout
+        assert "Griddled chicken with pesto" not in callout

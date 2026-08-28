@@ -42,6 +42,12 @@ stored. Runs are grouped into ISO weeks (Monday-Sunday) in a summary above the
 log, where average pace comes from the week's totals rather than a mean of the
 individual paces - so a short run does not weigh as heavily as a long one.
 
+After each run, RunFuel suggests a meal sized to what you burned: it picks the
+recipe and whole serving count (up to three) whose total calories land closest,
+and shows it above the weekly summary. Only dish names and published
+per-serving nutrition are stored - the recipes themselves belong to their
+authors and are not reproduced here.
+
 If you have a database from before the felt rating existed, it is upgraded in
 place the next time the app starts; existing runs simply show no rating.
 
