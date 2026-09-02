@@ -302,3 +302,23 @@ class TestRefuelSuggestion:
 
         assert "Salmon and gnocchi hash" in callout
         assert "Griddled chicken with pesto" not in callout
+
+
+class TestHealth:
+    def test_reports_ok_when_the_database_is_reachable(self, client):
+        response = client.get("/health")
+
+        assert response.status_code == 200
+        assert response.json() == {"status": "ok"}
+
+    def test_reports_unavailable_when_the_database_is_gone(self, client, settings):
+        # A health check that only proves the process is alive would still say
+        # "ok" here. Deleting the file the app was told to use simulates a
+        # broken volume mount, which is the failure worth catching.
+        settings.db_path.unlink()
+        settings.db_path.mkdir()  # a directory where a database should be
+
+        response = client.get("/health")
+
+        assert response.status_code == 503
+        assert response.json() == {"status": "unavailable"}
