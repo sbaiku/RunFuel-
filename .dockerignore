@@ -1,0 +1,27 @@
+# Git history: every past version of every file. Never needed at runtime, it
+# invalidates the build cache on each commit, and anything ever committed and
+# later deleted (keys, tokens) would ship inside the image.
+.git
+.gitignore
+
+# A virtualenv built for the host OS/arch, full of absolute host paths. Copied
+# into a Linux image it is broken, and it can shadow the image's own venv --
+# producing confusing import errors instead of an honest failure.
+.venv
+
+# Build and test noise
+__pycache__/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+dist/
+
+# Local data: without this, your own training log gets baked into the image.
+*.db
+
+# Not needed to run the app
+docs/
+.claude/
+.superpowers/
+Dockerfile
+.dockerignore

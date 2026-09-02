@@ -8,7 +8,7 @@ from datetime import date
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Form, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from runfuel import calc, db, recipes
@@ -80,6 +80,24 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/")
     def index(request: Request, connection=Depends(get_connection)):
         return _render(request, connection)
+
+    @app.get("/health")
+    def health():
+        """Readiness, not just liveness.
+
+        Touching the database is the point: a process that is running but
+        cannot reach its storage is not healthy, and a check that only proved
+        the process was alive would report ``ok`` through a broken mount.
+        """
+        try:
+            connection = db.connect(settings.db_path)
+            try:
+                connection.execute("SELECT 1 FROM runs LIMIT 1")
+            finally:
+                connection.close()
+        except Exception:
+            return JSONResponse({"status": "unavailable"}, status_code=503)
+        return {"status": "ok"}
 
     @app.post("/runs")
     def create_run(

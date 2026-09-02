@@ -51,6 +51,35 @@ authors and are not reproduced here.
 If you have a database from before the felt rating existed, it is upgraded in
 place the next time the app starts; existing runs simply show no rating.
 
+## Docker
+
+```bash
+docker build -t runfuel .
+docker run -d -p 8000:8000 -v runfuel-data:/data runfuel
+```
+
+Then open http://127.0.0.1:8000.
+
+The image is a two-stage build on `python:3.13-slim`: dependencies are
+installed in a builder stage and only the finished virtualenv is copied into a
+clean runtime image, which carries no uv, no compilers and no lockfile. The app
+runs as the unprivileged user `appuser` (uid 1000).
+
+**Mount something at `/data` or your log dies with the container.** Inside the
+image `RUNFUEL_DB_PATH` points at `/data/runfuel.db`; without a volume that
+path lives in the container's own writable layer and is discarded when the
+container is removed.
+
+If you bind-mount a host directory rather than a named volume, the host
+directory must be writable by uid 1000 - a bind mount keeps the host's
+ownership, so a root-owned directory will leave the app unable to write.
+
+`GET /health` returns `{"status": "ok"}`, or 503 if the database cannot be
+reached. It is wired to a Docker `HEALTHCHECK` and is what a deploy platform
+should probe. It deliberately queries the database rather than only confirming
+the process is alive, so a broken volume mount reports unhealthy instead of
+pretending everything is fine.
+
 ## Configuration
 
 | Variable | Default | Meaning |
